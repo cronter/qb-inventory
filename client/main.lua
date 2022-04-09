@@ -14,6 +14,7 @@ local CurrentGlovebox = nil
 local CurrentStash = nil
 local isCrafting = false
 local isHotbar = false
+local notepad_used = false
 local itemInfos = {}
 
 -- Functions
@@ -104,6 +105,7 @@ local function CloseTrunk()
 end
 
 local function closeInventory()
+notepad_used = false
     SendNUIMessage({
         action = "close",
     })
@@ -350,6 +352,7 @@ RegisterNetEvent('inventory:client:CraftItems', function(itemName, itemCosts, am
     SendNUIMessage({
         action = "close",
     })
+	notepad_used = false
     isCrafting = true
     QBCore.Functions.Progressbar("repair_vehicle", "Crafting..", (math.random(2000, 5000) * amount), false, true, {
 		disableMovement = true,
@@ -374,6 +377,7 @@ end)
 
 RegisterNetEvent('inventory:client:CraftAttachment', function(itemName, itemCosts, amount, toSlot, points)
     local ped = PlayerPedId()
+	notepad_used = false
     SendNUIMessage({
         action = "close",
     })
@@ -494,8 +498,17 @@ RegisterNetEvent('inventory:client:RemoveDropItem', function(dropId)
     DropsNear[dropId] = nil
 end)
 
+RegisterNetEvent('inventory:client:close')
+AddEventHandler("inventory:client:close", function()
+
+    SendNUIMessage({
+        action = "close",
+    })
+end)
+
 RegisterNetEvent('inventory:client:DropItemAnim', function()
     local ped = PlayerPedId()
+	notepad_used = false
     SendNUIMessage({
         action = "close",
     })
@@ -516,9 +529,16 @@ end)
 
 RegisterCommand('closeinv', function()
     closeInventory()
+	notepad_used = false
 end, false)
 
+exports("SetNotepadUsed", function(toggle)
+    notepad_used = toggle;
+end)
+
 RegisterCommand('inventory', function()
+ print('Notepad used : ', notepad_used)
+    if(not notepad_used) then
     if not isCrafting and not inInventory then
         if not PlayerData.metadata["isdead"] and not PlayerData.metadata["inlaststand"] and not PlayerData.metadata["ishandcuffed"] and not IsPauseMenuActive() then
             local ped = PlayerPedId()
@@ -630,27 +650,32 @@ RegisterCommand('inventory', function()
             end
         end
     end
+	end
 end)
 
 RegisterKeyMapping('inventory', 'Open Inventory', 'keyboard', 'TAB')
 
 RegisterCommand('hotbar', function()
+if(not exports['lucid-notepad']:isNotePadOpen()) then
     isHotbar = not isHotbar
     if not PlayerData.metadata["isdead"] and not PlayerData.metadata["inlaststand"] and not PlayerData.metadata["ishandcuffed"] and not IsPauseMenuActive() then
         ToggleHotbar(isHotbar)
     end
+	end
 end)
 
 RegisterKeyMapping('hotbar', 'Toggles keybind slots', 'keyboard', 'z')
 
 for i = 1, 6 do
     RegisterCommand('slot' .. i,function()
+		if(not exports['lucid-notepad']:isNotePadOpen()) then
         if not PlayerData.metadata["isdead"] and not PlayerData.metadata["inlaststand"] and not PlayerData.metadata["ishandcuffed"] and not IsPauseMenuActive() then
             if i == 6 then
                 i = MaxInventorySlots
             end
             TriggerServerEvent("inventory:server:UseItemSlot", i)
         end
+		end
     end)
     RegisterKeyMapping('slot' .. i, 'Uses the item in slot ' .. i, 'keyboard', i)
 end
@@ -716,6 +741,7 @@ RegisterNUICallback('getCombineItem', function(data, cb)
 end)
 
 RegisterNUICallback("CloseInventory", function()
+notepad_used = false
     if currentOtherInventory == "none-inv" then
         CurrentDrop = nil
         CurrentVehicle = nil
@@ -745,6 +771,11 @@ RegisterNUICallback("CloseInventory", function()
 end)
 
 RegisterNUICallback("UseItem", function(data)
+print('data item name : ', data.item.name)
+    if(data.item.name == 'notepad_item') then
+        print('notepad used true')
+        notepad_used = true
+    end
     TriggerServerEvent("inventory:server:UseItem", data.inventory, data.item)
 end)
 
@@ -789,6 +820,10 @@ end)
 
 RegisterNUICallback("PlayDropFail", function()
     PlaySound(-1, "Place_Prop_Fail", "DLC_Dmod_Prop_Editor_Sounds", 0, 0, 1)
+end)
+
+RegisterNUICallback("changeOutfitLabel", function(data, cb)
+    TriggerServerEvent('lucid:changeOutfitLabel', { itemData =  data.itemData, label = data.newLabel})
 end)
 
 RegisterNUICallback("GiveItem", function(data)

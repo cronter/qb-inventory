@@ -1514,7 +1514,9 @@ QBCore.Commands.Add("giveitem", "Give An Item (Admin Only)", {{name="id", help="
 				elseif itemData["name"] == "harness" then
 					info.uses = 20
 				elseif itemData["name"] == "markedbills" then
-					info.worth = math.random(5000, 10000)
+					info.worth = math.random(50, 100)
+				elseif itemData["name"] == "cront_bag1" then
+					info.bagname = QBCore.Shared.RandomStr(8)
 				elseif itemData["name"] == "labkey" then
 					info.lab = exports["qb-methlab"]:GenerateRandomLab()
 				elseif itemData["name"] == "printerdocument" then
@@ -1615,5 +1617,32 @@ QBCore.Functions.CreateUseableItem("id_card", function(source, item)
 				}
 			)
 		end
+	end
+end)
+
+RegisterServerEvent('lucid:changeOutfitLabel')
+AddEventHandler('lucid:changeOutfitLabel', function(data)
+	local src = source
+	local itemData = data.itemData;
+	local newLabel = data.label;
+	local Player = QBCore.Functions.GetPlayer(src)
+	local playerItems =  Player.PlayerData.items;
+
+
+	local changed =  false
+	for  k,v in pairs(playerItems) do
+		if v.slot == itemData.slot then
+			if(v.info) then
+				if(v.info.label) then
+					v.info.label = newLabel
+					changed = true
+				end
+			end
+		end
+	end
+
+	if(changed) then
+		Player.Functions.SetInventory(playerItems,  false)
+		TriggerClientEvent('inventory:client:close', src)
 	end
 end)
